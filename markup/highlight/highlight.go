@@ -29,6 +29,7 @@ import (
 	"github.com/gohugoio/hugo/common/text"
 	"github.com/gohugoio/hugo/markup/converter/hooks"
 	"github.com/gohugoio/hugo/markup/highlight/chromalexers"
+	"github.com/gohugoio/hugo/markup/highlight/treesitter"
 	"github.com/gohugoio/hugo/markup/internal/attributes"
 )
 
@@ -44,6 +45,7 @@ var chromaHighlightProcessingAttributes = map[string]bool{
 	"noClasses":          true,
 	"style":              true,
 	"tabWidth":           true,
+	"useTreeSitter":      true,
 }
 
 func init() {
@@ -74,6 +76,11 @@ func (h chromaHighlighter) Highlight(code, lang string, opts any) (string, error
 	if err := applyOptions(opts, &cfg); err != nil {
 		return "", err
 	}
+
+	if cfg.UseTreeSitter {
+		return treesitter.Highlight(code, lang)
+	}
+
 	var b strings.Builder
 
 	if _, _, err := highlight(&b, code, lang, nil, cfg); err != nil {
@@ -103,6 +110,21 @@ func (h chromaHighlighter) HighlightCodeBlock(ctx hooks.CodeblockContext, opts a
 
 	if err := applyOptionsFromCodeBlockContext(ctx, &cfg); err != nil {
 		return HighlightResult{}, err
+	}
+
+	if cfg.UseTreeSitter {
+		htmlContent, err := treesitter.Highlight(ctx.Inner(), ctx.Type())
+		if err != nil {
+			return HighlightResult{}, err
+		}
+
+		// Wrap in pre/code
+		wrapped := fmt.Sprintf(`<pre class="treesitter" data-lang="%s"><code>%s</code></pre>`, ctx.Type(), htmlContent)
+		return HighlightResult{
+			highlighted: template.HTML(wrapped),
+			innerLow:    0,
+			innerHigh:   len(wrapped),
+		}, nil
 	}
 
 	low, high, err := highlight(&b, ctx.Inner(), ctx.Type(), attributes, cfg)
@@ -136,6 +158,18 @@ func (h chromaHighlighter) RenderCodeblock(cctx context.Context, w hugio.FlexiWr
 	}
 
 	code := text.Puts(ctx.Inner())
+
+	if cfg.UseTreeSitter {
+		htmlContent, err := treesitter.Highlight(code, ctx.Type())
+		if err != nil {
+			return err
+		}
+		// Wrap in pre/code to match expected block behavior
+		// Tree-sitter provides semantic highlighting with capture-based CSS classes.
+		// We'll add a basically standard wrapper.
+		fmt.Fprintf(w, `<pre class="treesitter" data-lang="%s"><code>%s</code></pre>`, ctx.Type(), htmlContent)
+		return nil
+	}
 
 	_, _, err := highlight(w, code, ctx.Type(), attributes, cfg)
 	return err

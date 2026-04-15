@@ -29,6 +29,46 @@
 [website]: https://gohugo.io
 [windows]: https://gohugo.io/installation/windows
 
+## Fork changes
+
+This is a personal fork of Hugo with the following changes from upstream:
+
+### Tree-sitter syntax highlighting
+
+Adds an alternative syntax highlighter based on [gotreesitter](https://github.com/odvcencio/gotreesitter), a pure-Go tree-sitter binding. Tree-sitter produces a concrete syntax tree and runs highlight queries against it, which gives more semantically accurate token classification than regex-based lexers.
+
+**Enable globally** in `hugo.toml`:
+
+```toml
+[markup.highlight]
+useTreeSitter = true
+```
+
+**Enable per code block**:
+
+````markdown
+```go {useTreeSitter=true}
+package main
+```
+````
+
+**Output format**: code blocks are wrapped in `<pre class="treesitter" data-lang="…"><code>…</code></pre>`. Tokens are wrapped in `<span>` elements with CSS classes derived from tree-sitter capture names, prefixed with `ts-`:
+
+| Capture | Class |
+|---------|-------|
+| `keyword` | `ts-keyword` |
+| `keyword.function` | `ts-keyword ts-function` |
+| `function` | `ts-function` |
+| `string` | `ts-string` |
+| `number` | `ts-number` |
+| `comment` | `ts-comment` |
+| `type` | `ts-type` |
+| `variable` | `ts-variable` |
+
+205 languages are supported out of the box. Common aliases (`golang`, `js`, `ts`, `py`, `sh`, …) are resolved automatically. Unknown or unsupported languages fall back to plain HTML-escaped text.
+
+---
+
 <a href="https://gohugo.io/"><img src="https://raw.githubusercontent.com/gohugoio/gohugoioTheme/master/static/images/hugo-logo-wide.svg?sanitize=true" alt="Hugo" width="565"></a>
 
 A fast and flexible static site generator built with love by [bep][], [spf13][], and [friends][] in Go.

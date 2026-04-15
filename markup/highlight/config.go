@@ -83,6 +83,9 @@ type Config struct {
 	TabWidth int
 
 	GuessSyntax bool
+
+	// Use Tree-sitter for syntax highlighting.
+	UseTreeSitter bool
 }
 
 const errLineNosMsg = `lineNos must be one of true, false, "inline", or "table"; got %[1]v (%[1]T)`
